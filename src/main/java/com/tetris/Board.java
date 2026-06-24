@@ -25,10 +25,27 @@ public class Board extends JPanel implements ActionListener {
     private Color[][] background = new Color[ROWS][COLUMNS];
     private List<PieceShape> piecesBag = new ArrayList<>();
     private boolean gameOver = false;
-    private int points = 0;
+    private int score = 0;
     private int totalCleanLines = 0;
+    private JButton restartButton;
 
     public Board() {
+        restartButton = new JButton("Restart");
+        restartButton.setFocusable(false);
+        restartButton.setBackground(Color.WHITE);
+        restartButton.setForeground(Color.BLACK);
+        restartButton.setFont(new Font("Arial", Font.BOLD, 14));
+
+        int buttonWidth = 160;
+        int x = (COLUMNS * BOX_SIZE - buttonWidth) / 2;
+        int y = (ROWS * BOX_SIZE / 2) + 30;
+        restartButton.setBounds(x, y, buttonWidth, 40);
+        // 4. Definir qué hace el botón al hacer clic
+        restartButton.addActionListener(e -> restartGame());
+        restartButton.setVisible(false);
+        this.setLayout(null);
+        this.add(restartButton);
+
         setPreferredSize(new Dimension(COLUMNS * BOX_SIZE, ROWS * BOX_SIZE));
         setBackground(Color.BLACK);
         setFocusable(true);
@@ -78,7 +95,7 @@ public class Board extends JPanel implements ActionListener {
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 16));
-        g.drawString("Total score: " + points, 10, 25);
+        g.drawString("Total score: " + score, 10, 25);
 
         if (activePiece != null) {
             g.setColor(activePiece.getColor());
@@ -131,6 +148,7 @@ public class Board extends JPanel implements ActionListener {
             if (checkCollision(newPiece.getX(), newPiece.getY(), newPiece.getArray())) {
                 gameOver = true;
                 timer.stop();
+                restartButton.setVisible(true);
                 System.out.println("GAME OVER!");
             }
 
@@ -259,13 +277,31 @@ public class Board extends JPanel implements ActionListener {
         totalCleanLines += lines;
 
         switch (lines) {
-            case 1: points += 100; break;
-            case 2: points += 300; break;
-            case 3: points += 500; break;
-            case 4: points += 800; break;
+            case 1: score += 100; break;
+            case 2: score += 300; break;
+            case 3: score += 500; break;
+            case 4: score += 800; break;
         }
 
-        System.out.println("Líneas borradas: " + lines + " | Puntuación total: " + points);
+        System.out.println("Líneas borradas: " + lines + " | Puntuación total: " + score);
+    }
+
+    private void restartGame() {
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLUMNS; col++) {
+                background[row][col] = null;
+            }
+        }
+
+        score = 0;
+        gameOver = false;
+        restartButton.setVisible(false);
+        piecesBag.clear();
+        activePiece = new Piece(getRandomPieceShape());
+        timer.start();
+
+        this.requestFocusInWindow();
+        repaint();
     }
 
 }
