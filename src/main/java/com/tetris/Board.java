@@ -225,7 +225,6 @@ public class Board extends JPanel implements ActionListener {
             boolean filaCompleta = true;
 
             for (int col = 0; col < ROWS; col++) {
-                System.out.println("Row: " + row + " Col: " + col + " ");
                 if (col < COLUMNS && background[row][col] == null) {
                     filaCompleta = false;
                     break;

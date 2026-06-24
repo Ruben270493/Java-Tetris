@@ -1,0 +1,81 @@
+Index: src/main/java/com/tetris/Board.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.tetris;\r\n\r\nimport com.tetris.model.Piece;\r\nimport com.tetris.model.PieceShape;\r\n\r\nimport javax.swing.*;\r\nimport java.awt.*;\r\nimport java.awt.event.ActionEvent;\r\nimport java.awt.event.ActionListener;\r\nimport java.awt.event.KeyAdapter;\r\nimport java.awt.event.KeyEvent;\r\nimport java.util.ArrayList;\r\nimport java.util.Collections;\r\nimport java.util.List;\r\n\r\npublic class Board extends JPanel implements ActionListener {\r\n\r\n    private final int ROWS = 20;\r\n    private final int COLUMNS = 10;\r\n    private final int BOX_SIZE = 30;\r\n\r\n    private Timer timer;\r\n    private Piece activePiece;\r\n\r\n    private Color[][] background = new Color[ROWS][COLUMNS];\r\n    private List<PieceShape> piecesBag = new ArrayList<>();\r\n    private boolean gameOver = false;\r\n    private int points = 0;\r\n    private int totalCleanLines = 0;\r\n\r\n    public Board() {\r\n        setPreferredSize(new Dimension(COLUMNS * BOX_SIZE, ROWS * BOX_SIZE));\r\n        setBackground(Color.BLACK);\r\n        setFocusable(true);\r\n\r\n        addKeyListener(new KeyboardControl());\r\n        activePiece = new Piece(getRandomPieceShape());\r\n\r\n        timer = new Timer(500, this);\r\n        timer.start();\r\n    }\r\n\r\n    private PieceShape getRandomPieceShape() {\r\n        if (piecesBag.isEmpty()) {\r\n            for (PieceShape shape : PieceShape.values()) {\r\n                if (shape != PieceShape.EMPTY) {\r\n                    piecesBag.add(shape);\r\n                }\r\n            }\r\n\r\n            Collections.shuffle(piecesBag);\r\n        }\r\n\r\n        return piecesBag.remove(0);\r\n    }\r\n\r\n    @Override\r\n    protected void paintComponent(Graphics g) {\r\n        super.paintComponent(g);\r\n\r\n        g.setColor(Color.DARK_GRAY);\r\n        for (int i = 0; i < COLUMNS; i++) {\r\n            for (int j = 0; j < ROWS; j++) {\r\n                g.drawRect(i * BOX_SIZE, j * BOX_SIZE, BOX_SIZE, BOX_SIZE);\r\n            }\r\n        }\r\n\r\n        for (int fila = 0; fila < ROWS; fila++) {\r\n            for (int col = 0; col < COLUMNS; col++) {\r\n                if (background[fila][col] != null) {\r\n                    g.setColor(background[fila][col]);\r\n                    g.fillRect(col * BOX_SIZE, fila * BOX_SIZE, BOX_SIZE, BOX_SIZE);\r\n                    g.setColor(Color.BLACK);\r\n                    g.drawRect(col * BOX_SIZE, fila * BOX_SIZE, BOX_SIZE, BOX_SIZE);\r\n                }\r\n            }\r\n        }\r\n\r\n        g.setColor(Color.WHITE);\r\n        g.setFont(new Font(\"Arial\", Font.BOLD, 16));\r\n        g.drawString(\"Total score: \" + points, 10, 25);\r\n\r\n        if (activePiece != null) {\r\n            g.setColor(activePiece.getColor());\r\n            int[][] matriz = activePiece.getArray();\r\n\r\n            for (int fila = 0; fila < matriz.length; fila++) {\r\n                for (int col = 0; col < matriz[fila].length; col++) {\r\n                    if (matriz[fila][col] == 1) {\r\n                        int dibujoX = (activePiece.getX() + col) * BOX_SIZE;\r\n                        int dibujoY = (activePiece.getY() + fila) * BOX_SIZE;\r\n\r\n                        g.fillRect(dibujoX, dibujoY, BOX_SIZE, BOX_SIZE);\r\n                        g.setColor(Color.BLACK);\r\n                        g.drawRect(dibujoX, dibujoY, BOX_SIZE, BOX_SIZE);\r\n                        g.setColor(activePiece.getColor());\r\n                    }\r\n                }\r\n            }\r\n        }\r\n\r\n        if (gameOver) {\r\n            g.setColor(new Color(0, 0, 0, 180));\r\n            g.fillRect(0, 0, getWidth(), getHeight());\r\n\r\n            g.setColor(Color.RED);\r\n            g.setFont(new Font(\"Arial\", Font.BOLD, 30));\r\n\r\n            String texto = \"GAME OVER!\";\r\n            FontMetrics fm = g.getFontMetrics();\r\n            int x = (getWidth() - fm.stringWidth(texto)) / 2;\r\n            int y = getHeight() / 2;\r\n\r\n            g.drawString(texto, x, y);\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void actionPerformed(ActionEvent e) {\r\n        if (gameOver) {\r\n            return;\r\n        }\r\n\r\n        if (!checkCollision(activePiece.getX(), activePiece.getY() + 1, activePiece.getArray())) {\r\n            activePiece.fall();\r\n        } else {\r\n            fixOnTheBottom();\r\n            clearRows();\r\n            Piece newPiece = new Piece(getRandomPieceShape());\r\n\r\n            if (checkCollision(newPiece.getX(), newPiece.getY(), newPiece.getArray())) {\r\n                gameOver = true;\r\n                timer.stop();\r\n                System.out.println(\"GAME OVER!\");\r\n            }\r\n\r\n            activePiece = new Piece(getRandomPieceShape());\r\n        }\r\n        repaint();\r\n    }\r\n\r\n    private void fixOnTheBottom() {\r\n        int[][] matriz = activePiece.getArray();\r\n        for (int row = 0; row < matriz.length; row++) {\r\n            for (int col = 0; col < matriz[row].length; col++) {\r\n                if (matriz[row][col] == 1) {\r\n                    int boardX = activePiece.getX() + col;\r\n                    int boardY = activePiece.getY() + row;\r\n\r\n                    // Guardamos el color de la pieza en el fondo estático\r\n                    if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLUMNS) {\r\n                        background[boardY][boardX] = activePiece.getColor();\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    private class KeyboardControl extends KeyAdapter {\r\n        @Override\r\n        public void keyPressed(KeyEvent e) {\r\n            if (gameOver) { return; }\r\n\r\n            int key = e.getKeyCode();\r\n\r\n            switch (key) {\r\n                case KeyEvent.VK_LEFT:\r\n                    if (!checkCollision(activePiece.getX() - 1, activePiece.getY(), activePiece.getArray())) {\r\n                        activePiece.moveLeft();\r\n                    }\r\n                    break;\r\n                case KeyEvent.VK_RIGHT:\r\n                    if (!checkCollision(activePiece.getX() + 1, activePiece.getY(), activePiece.getArray())) {\r\n                    activePiece.moveRight();\r\n                    }\r\n                    break;\r\n                case KeyEvent.VK_UP:\r\n                    activePiece.turnRight();\r\n                    if (checkCollision(activePiece.getX(), activePiece.getY(), activePiece.getArray())) {\r\n                        activePiece.turnRight();\r\n                        activePiece.turnRight();\r\n                        activePiece.turnRight();\r\n                    }\r\n                    break;\r\n                case KeyEvent.VK_DOWN:\r\n                    if (!checkCollision(activePiece.getX(), activePiece.getY() + 1, activePiece.getArray())) {\r\n                        activePiece.fall();\r\n                    }\r\n                    break;\r\n            }\r\n\r\n            repaint();\r\n        }\r\n    }\r\n\r\n    public boolean checkCollision(int futureX, int futureY, int[][] futureArray) {\r\n        for(int row = 0; row < futureArray.length; row++) {\r\n            for (int col = 0; col < futureArray[row].length; col++) {\r\n                if (futureArray[row][col] == 1) {\r\n                    int boardX = futureX + col;\r\n                    int boardY = futureY + row;\r\n\r\n                    if (boardX < 0 || boardX >= COLUMNS || boardY >= ROWS) {\r\n                        return true;\r\n                    }\r\n\r\n                    if (boardY < 0)  {\r\n                        continue;\r\n                    }\r\n\r\n                    if (background[boardY][boardX] != null) {\r\n                        return true;\r\n                    }\r\n                }\r\n            }\r\n        }\r\n\r\n        return false;\r\n    }\r\n\r\n    private void clearRows() {\r\n        int linesCleanInThisTurn = 0;\r\n\r\n        for (int row = ROWS - 1; row >= 0; row--) {\r\n            boolean filaCompleta = true;\r\n\r\n            for (int col = 0; col < ROWS; col++) {\r\n                System.out.println(\"Row: \" + row + \" Col: \" + col + \" \");\r\n                if (col < COLUMNS && background[row][col] == null) {\r\n                    filaCompleta = false;\r\n                    break;\r\n                }\r\n            }\r\n\r\n            if (filaCompleta) {\r\n                linesCleanInThisTurn++;\r\n\r\n                for (int f = row; f > 0; f--) {\r\n                    for (int c = 0; c < COLUMNS; c++) {\r\n                        background[f][c] = background[f - 1][c];\r\n                    }\r\n                }\r\n\r\n                for (int c = 0; c < COLUMNS; c++) {\r\n                    background[0][c] = null;\r\n                }\r\n\r\n                if (row < ROWS - 1) {\r\n                    row++;\r\n                }\r\n            }\r\n        }\r\n\r\n        if (linesCleanInThisTurn > 0) {\r\n            addPoints(linesCleanInThisTurn);\r\n        }\r\n    }\r\n\r\n    private void addPoints(int lines) {\r\n        totalCleanLines += lines;\r\n\r\n        switch (lines) {\r\n            case 1: points += 100; break;\r\n            case 2: points += 300; break;\r\n            case 3: points += 500; break;\r\n            case 4: points += 800; break;\r\n        }\r\n\r\n        System.out.println(\"Líneas borradas: \" + lines + \" | Puntuación total: \" + points);\r\n    }\r\n\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/tetris/Board.java b/src/main/java/com/tetris/Board.java
+--- a/src/main/java/com/tetris/Board.java	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
++++ b/src/main/java/com/tetris/Board.java	(date 1782309880136)
+@@ -225,7 +225,6 @@
+             boolean filaCompleta = true;
+ 
+             for (int col = 0; col < ROWS; col++) {
+-                System.out.println("Row: " + row + " Col: " + col + " ");
+                 if (col < COLUMNS && background[row][col] == null) {
+                     filaCompleta = false;
+                     break;
+Index: .idea/.gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/.gitignore b/.idea/.gitignore
+deleted file mode 100644
+--- a/.idea/.gitignore	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
++++ /dev/null	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
+@@ -1,10 +0,0 @@
+-# Default ignored files
+-/shelf/
+-/workspace.xml
+-# Editor-based HTTP Client requests
+-/httpRequests/
+-# Ignored default folder with query files
+-/queries/
+-# Datasource local storage ignored files
+-/dataSources/
+-/dataSources.local.xml
+Index: .idea/encodings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/encodings.xml b/.idea/encodings.xml
+deleted file mode 100644
+--- a/.idea/encodings.xml	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
++++ /dev/null	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
+@@ -1,7 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="Encoding">
+-    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+-    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+-  </component>
+-</project>
+\ No newline at end of file
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+deleted file mode 100644
+--- a/.idea/misc.xml	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
++++ /dev/null	(revision 4c024833173f2aeb02bf4215545cb7a829a3456c)
+@@ -1,14 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="ExternalStorageConfigurationManager" enabled="true" />
+-  <component name="MavenProjectsManager">
+-    <option name="originalFiles">
+-      <list>
+-        <option value="$PROJECT_DIR$/pom.xml" />
+-      </list>
+-    </option>
+-  </component>
+-  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="25" project-jdk-type="JavaSDK">
+-    <output url="file://$PROJECT_DIR$/out" />
+-  </component>
+-</project>
+\ No newline at end of file
